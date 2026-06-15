@@ -18,6 +18,7 @@
       --highlight: #ffe066;
       --highlight-text: #111;
       --danger: #ff6b6b;
+      --success: #6ee7b7;
     }
 
     * {
@@ -74,6 +75,14 @@
       font-size: 13px;
     }
 
+    .status-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
     .status-pill {
       padding: 8px 12px;
       border: 1px solid var(--border);
@@ -82,6 +91,12 @@
       color: var(--muted);
       font-size: 13px;
       white-space: nowrap;
+    }
+
+    .status-pill.active {
+      color: var(--success);
+      border-color: rgba(110, 231, 183, 0.35);
+      background: rgba(110, 231, 183, 0.08);
     }
 
     .flash-area {
@@ -176,6 +191,12 @@
       background: linear-gradient(135deg, #35b8ff, #6ce0ff);
     }
 
+    .stop {
+      background: linear-gradient(135deg, #ff7a59, #ffb86c);
+      color: #180b06;
+      font-weight: 700;
+    }
+
     .danger {
       background: rgba(255, 107, 107, 0.14);
       color: #ffb7b7;
@@ -214,7 +235,7 @@
       font-size: 12px;
     }
 
-    #textInput {
+    #sourceText {
       flex: 1;
       overflow-y: auto;
       padding: 16px 18px;
@@ -226,8 +247,8 @@
       word-break: break-word;
     }
 
-    #textInput:empty::before {
-      content: "Paste your text here. The current word group will highlight here while the words flash above.";
+    #sourceText:empty::before {
+      content: "Paste your text here. Click any word while stopped to choose where reading starts.";
       color: #6f7b8d;
     }
 
@@ -235,6 +256,17 @@
       border-radius: 6px;
       padding: 1px 2px;
       margin: 0 1px;
+      cursor: pointer;
+    }
+
+    .word:hover {
+      background: rgba(93, 214, 255, 0.14);
+    }
+
+    .word.selected {
+      background: rgba(93, 214, 255, 0.32);
+      color: #ffffff;
+      box-shadow: 0 0 0 2px rgba(93, 214, 255, 0.12);
     }
 
     .word.current {
@@ -264,7 +296,7 @@
       .app {
         padding: 10px;
         gap: 10px;
-        grid-template-rows: 1fr auto 30vh;
+        grid-template-rows: 1fr auto 32vh;
       }
 
       .top-bar {
@@ -298,7 +330,7 @@
         font-size: clamp(36px, 11vw, 70px);
       }
 
-      #textInput {
+      #sourceText {
         font-size: 16px;
       }
     }
@@ -311,11 +343,12 @@
       <div class="top-bar">
         <div class="title-block">
           <h1>Reading Speed Trainer</h1>
-          <p>Paste text below, set your speed, then start the word stream.</p>
+          <p>Paste text below, choose your speed ramp, then start the word stream.</p>
         </div>
 
-        <div class="status-pill" id="statusPill">
-          Ready
+        <div class="status-group">
+          <div class="status-pill" id="speedPill">Current: 0 WPM</div>
+          <div class="status-pill" id="statusPill">Ready</div>
         </div>
       </div>
 
@@ -326,8 +359,19 @@
 
     <section class="controls-panel">
       <div class="control-group">
-        <label for="wpmInput">Words per minute</label>
-        <input id="wpmInput" type="number" value="300" min="50" max="1500" />
+        <label for="warmupWpmInput">Warm-up WPM</label>
+        <input id="warmupWpmInput" type="number" value="250" min="50" max="1500" />
+      </div>
+
+      <div class="control-group">
+        <label for="targetWpmInput">Target WPM</label>
+        <input id="targetWpmInput" type="number" value="500" min="50" max="1500" />
+      </div>
+
+      <div class="control-group">
+        <label for="rampSecondsInput">Ramp time</label>
+        <input id="rampSecondsInput" type="number" value="60" min="0" max="3600" />
+        <label>sec</label>
       </div>
 
       <div class="control-group">
@@ -335,9 +379,8 @@
         <input id="chunkInput" type="number" value="3" min="1" max="12" />
       </div>
 
-      <button class="primary" onclick="startReading()">Start</button>
-      <button onclick="pauseReading()">Pause</button>
-      <button class="danger" onclick="resetReading()">Reset</button>
+      <button id="playButton" class="primary">Start</button>
+      <button id="resetButton" class="danger">Reset</button>
     </section>
 
     <section class="text-panel">
@@ -350,197 +393,445 @@
         <div id="progressFill"></div>
       </div>
 
-      <div id="textInput" contenteditable="true"></div>
+      <div id="sourceText" contenteditable="true"></div>
     </section>
   </main>
 
   <script>
-    let rawText = "";
-    let words = [];
-    let currentIndex = 0;
-    let currentChunkStart = 0;
-    let currentChunkEnd = 0;
-    let timer = null;
-    let isPrepared = false;
+    /*
+      Reading Speed Trainer
+      ---------------------
+      Structure designed for future expansion:
+      - AppState stores all app data.
+      - Elements stores all DOM references.
+      - Storage will later handle settings/history.
+      - TextRenderer handles source text display/highlighting.
+      - ReaderEngine handles playback and speed ramp timing.
 
-    const textInput = document.getElementById("textInput");
-    const display = document.getElementById("display");
-    const stats = document.getElementById("stats");
-    const statusPill = document.getElementById("statusPill");
-    const progressFill = document.getElementById("progressFill");
+      Future additions can be added as new modules:
+      - ReadingHistory
+      - GoalTracker
+      - HabitTracker
+      - SyncManager
+    */
 
-    textInput.addEventListener("paste", function(event) {
-      event.preventDefault();
+    const AppState = {
+      rawText: "",
+      words: [],
+      currentIndex: 0,
+      selectedIndex: 0,
+      currentChunkStart: 0,
+      currentChunkEnd: 0,
+      isPrepared: false,
+      isPlaying: false,
+      playbackStartTime: null,
+      timeoutId: null,
+      activeSession: null
+    };
 
-      const pastedText = event.clipboardData.getData("text/plain");
-      document.execCommand("insertText", false, pastedText);
-    });
+    const Elements = {
+      sourceText: document.getElementById("sourceText"),
+      display: document.getElementById("display"),
+      stats: document.getElementById("stats"),
+      statusPill: document.getElementById("statusPill"),
+      speedPill: document.getElementById("speedPill"),
+      progressFill: document.getElementById("progressFill"),
+      playButton: document.getElementById("playButton"),
+      resetButton: document.getElementById("resetButton"),
+      warmupWpmInput: document.getElementById("warmupWpmInput"),
+      targetWpmInput: document.getElementById("targetWpmInput"),
+      rampSecondsInput: document.getElementById("rampSecondsInput"),
+      chunkInput: document.getElementById("chunkInput")
+    };
 
-    textInput.addEventListener("input", function() {
-      if (!timer) {
-        isPrepared = false;
-        rawText = textInput.innerText.trim();
-        updateIdleStats();
+    const Storage = {
+      settingsKey: "readingTrainer.settings.v1",
+
+      saveSettings() {
+        const settings = ReaderEngine.getSettings();
+        localStorage.setItem(this.settingsKey, JSON.stringify(settings));
+      },
+
+      loadSettings() {
+        const saved = localStorage.getItem(this.settingsKey);
+        if (!saved) return;
+
+        try {
+          const settings = JSON.parse(saved);
+
+          if (settings.warmupWpm) Elements.warmupWpmInput.value = settings.warmupWpm;
+          if (settings.targetWpm) Elements.targetWpmInput.value = settings.targetWpm;
+          if (settings.rampSeconds !== undefined) Elements.rampSecondsInput.value = settings.rampSeconds;
+          if (settings.chunkSize) Elements.chunkInput.value = settings.chunkSize;
+        } catch {
+          console.warn("Saved settings could not be loaded.");
+        }
       }
-    });
+    };
 
-    function getSettings() {
-      const wpm = Number(document.getElementById("wpmInput").value);
-      const chunkSize = Number(document.getElementById("chunkInput").value);
+    const TextTools = {
+      splitIntoWords(text) {
+        return text
+          .trim()
+          .split(/\s+/)
+          .filter(word => word.length > 0);
+      },
 
-      return {
-        wpm: Math.max(50, Math.min(wpm || 300, 1500)),
-        chunkSize: Math.max(1, Math.min(chunkSize || 3, 12))
-      };
-    }
+      escapeHtml(text) {
+        return text
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      },
 
-    function prepareWords() {
-      rawText = textInput.innerText.trim();
-
-      words = rawText
-        .split(/\s+/)
-        .filter(word => word.length > 0);
-
-      currentIndex = 0;
-      currentChunkStart = 0;
-      currentChunkEnd = 0;
-      isPrepared = true;
-
-      renderTextWithHighlights();
-      updateStats();
-    }
-
-    function renderTextWithHighlights() {
-      if (words.length === 0) {
-        return;
+      getPlainTextFromSource() {
+        return Elements.sourceText.innerText.trim();
       }
+    };
 
-      const html = words.map((word, index) => {
-        const safeWord = escapeHtml(word);
+    const TextRenderer = {
+      render() {
+        if (AppState.words.length === 0) return;
 
-        if (index >= currentChunkStart && index < currentChunkEnd) {
-          return `<span class="word current" id="word-${index}">${safeWord}</span>`;
+        const html = AppState.words.map((word, index) => {
+          const safeWord = TextTools.escapeHtml(word);
+          const classes = ["word"];
+
+          if (index >= AppState.currentChunkStart && index < AppState.currentChunkEnd) {
+            classes.push("current");
+          } else if (!AppState.isPlaying && index === AppState.selectedIndex) {
+            classes.push("selected");
+          } else if (index < AppState.currentChunkStart) {
+            classes.push("past");
+          }
+
+          return `<span class="${classes.join(" ")}" data-index="${index}" id="word-${index}">${safeWord}</span>`;
+        }).join(" ");
+
+        Elements.sourceText.innerHTML = html;
+
+        this.scrollToActiveWord();
+      },
+
+      scrollToActiveWord() {
+        const activeIndex = AppState.isPlaying
+          ? AppState.currentChunkStart
+          : AppState.selectedIndex;
+
+        const activeElement = document.getElementById("word-" + activeIndex);
+
+        if (activeElement) {
+          activeElement.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+            inline: "nearest"
+          });
+        }
+      },
+
+      showEditableRawText() {
+        Elements.sourceText.innerText = AppState.rawText;
+      }
+    };
+
+    const UI = {
+      setStatus(text, active = false) {
+        Elements.statusPill.textContent = text;
+        Elements.statusPill.classList.toggle("active", active);
+      },
+
+      setPlayButton(isPlaying) {
+        Elements.playButton.textContent = isPlaying ? "Stop" : "Start";
+        Elements.playButton.classList.toggle("stop", isPlaying);
+        Elements.playButton.classList.toggle("primary", !isPlaying);
+      },
+
+      updateStats() {
+        const total = AppState.words.length;
+        const completed = Math.min(AppState.currentIndex, total);
+        const percentage = total === 0 ? 0 : (completed / total) * 100;
+
+        Elements.stats.textContent = `Progress: ${completed} / ${total} words`;
+        Elements.progressFill.style.width = percentage + "%";
+      },
+
+      updateIdleStats() {
+        const idleWords = AppState.rawText.length === 0
+          ? []
+          : TextTools.splitIntoWords(AppState.rawText);
+
+        Elements.stats.textContent = `Progress: 0 / ${idleWords.length} words`;
+        Elements.progressFill.style.width = "0%";
+      },
+
+      updateSpeedPill(wpm) {
+        Elements.speedPill.textContent = `Current: ${Math.round(wpm)} WPM`;
+      }
+    };
+
+    const ReaderEngine = {
+      getSettings() {
+        const warmupWpm = Number(Elements.warmupWpmInput.value);
+        const targetWpm = Number(Elements.targetWpmInput.value);
+        const rampSeconds = Number(Elements.rampSecondsInput.value);
+        const chunkSize = Number(Elements.chunkInput.value);
+
+        return {
+          warmupWpm: Math.max(50, Math.min(warmupWpm || 250, 1500)),
+          targetWpm: Math.max(50, Math.min(targetWpm || 500, 1500)),
+          rampSeconds: Math.max(0, Math.min(rampSeconds || 0, 3600)),
+          chunkSize: Math.max(1, Math.min(chunkSize || 3, 12))
+        };
+      },
+
+      prepareFromText() {
+        AppState.rawText = TextTools.getPlainTextFromSource();
+        AppState.words = TextTools.splitIntoWords(AppState.rawText);
+
+        AppState.currentIndex = Math.min(AppState.selectedIndex, Math.max(AppState.words.length - 1, 0));
+        AppState.currentChunkStart = AppState.currentIndex;
+        AppState.currentChunkEnd = AppState.currentIndex;
+        AppState.isPrepared = true;
+
+        TextRenderer.render();
+        UI.updateStats();
+      },
+
+      togglePlayback() {
+        if (AppState.isPlaying) {
+          this.stop();
+        } else {
+          this.start();
+        }
+      },
+
+      start() {
+        if (!AppState.isPrepared) {
+          this.prepareFromText();
         }
 
-        if (index < currentChunkStart) {
-          return `<span class="word past" id="word-${index}">${safeWord}</span>`;
+        if (AppState.words.length === 0) {
+          Elements.display.textContent = "Paste text below first";
+          UI.setStatus("No text");
+          return;
         }
 
-        return `<span class="word" id="word-${index}">${safeWord}</span>`;
-      }).join(" ");
+        if (AppState.currentIndex >= AppState.words.length) {
+          AppState.currentIndex = AppState.selectedIndex || 0;
+        }
 
-      textInput.innerHTML = html;
+        Storage.saveSettings();
 
-      const currentWordElement = document.getElementById("word-" + currentChunkStart);
+        AppState.isPlaying = true;
+        AppState.playbackStartTime = Date.now();
+        AppState.activeSession = {
+          startedAt: new Date().toISOString(),
+          startIndex: AppState.currentIndex,
+          wordsAtStart: AppState.words.length
+        };
 
-      if (currentWordElement) {
-        currentWordElement.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-          inline: "nearest"
+        UI.setStatus("Playing", true);
+        UI.setPlayButton(true);
+
+        this.playNextChunk();
+      },
+
+      stop() {
+        clearTimeout(AppState.timeoutId);
+        AppState.timeoutId = null;
+        AppState.isPlaying = false;
+
+        AppState.selectedIndex = Math.min(AppState.currentIndex, Math.max(AppState.words.length - 1, 0));
+
+        UI.setStatus("Stopped");
+        UI.setPlayButton(false);
+
+        TextRenderer.render();
+      },
+
+      reset() {
+        clearTimeout(AppState.timeoutId);
+
+        AppState.timeoutId = null;
+        AppState.isPlaying = false;
+        AppState.currentIndex = 0;
+        AppState.selectedIndex = 0;
+        AppState.currentChunkStart = 0;
+        AppState.currentChunkEnd = 0;
+        AppState.isPrepared = false;
+        AppState.activeSession = null;
+
+        TextRenderer.showEditableRawText();
+
+        Elements.display.textContent = AppState.rawText.length > 0
+          ? "Press Start to begin"
+          : "Paste text below to begin";
+
+        UI.setStatus("Ready");
+        UI.setPlayButton(false);
+        UI.updateSpeedPill(0);
+        UI.updateIdleStats();
+      },
+
+      playNextChunk() {
+        if (!AppState.isPlaying) return;
+
+        const settings = this.getSettings();
+
+        if (AppState.currentIndex >= AppState.words.length) {
+          this.finish();
+          return;
+        }
+
+        AppState.currentChunkStart = AppState.currentIndex;
+        AppState.currentChunkEnd = Math.min(
+          AppState.currentIndex + settings.chunkSize,
+          AppState.words.length
+        );
+
+        const chunk = AppState.words.slice(AppState.currentChunkStart, AppState.currentChunkEnd);
+        Elements.display.textContent = chunk.join(" ");
+
+        AppState.currentIndex = AppState.currentChunkEnd;
+
+        const currentWpm = this.calculateCurrentWpm();
+        const delay = this.calculateDelay(currentWpm, settings.chunkSize);
+
+        UI.updateSpeedPill(currentWpm);
+        UI.updateStats();
+        TextRenderer.render();
+
+        AppState.timeoutId = setTimeout(() => {
+          this.playNextChunk();
+        }, delay);
+      },
+
+      calculateCurrentWpm() {
+        const settings = this.getSettings();
+
+        if (settings.rampSeconds <= 0 || settings.warmupWpm === settings.targetWpm) {
+          return settings.targetWpm;
+        }
+
+        const elapsedSeconds = (Date.now() - AppState.playbackStartTime) / 1000;
+        const rampProgress = Math.min(elapsedSeconds / settings.rampSeconds, 1);
+
+        return settings.warmupWpm + rampProgress * (settings.targetWpm - settings.warmupWpm);
+      },
+
+      calculateDelay(currentWpm, chunkSize) {
+        return Math.max(80, (60000 / currentWpm) * chunkSize);
+      },
+
+      finish() {
+        clearTimeout(AppState.timeoutId);
+
+        AppState.timeoutId = null;
+        AppState.isPlaying = false;
+        AppState.selectedIndex = 0;
+
+        Elements.display.textContent = "Finished";
+
+        UI.setStatus("Finished");
+        UI.setPlayButton(false);
+        UI.updateStats();
+
+        /*
+          Future reading history can be recorded here.
+          Example later:
+          ReadingHistory.addSession({
+            date,
+            wordsRead,
+            duration,
+            averageWpm
+          });
+        */
+      },
+
+      setStartIndex(index) {
+        if (AppState.isPlaying) return;
+
+        if (!AppState.isPrepared) {
+          this.prepareFromText();
+        }
+
+        if (AppState.words.length === 0) return;
+
+        AppState.selectedIndex = Math.max(0, Math.min(index, AppState.words.length - 1));
+        AppState.currentIndex = AppState.selectedIndex;
+        AppState.currentChunkStart = AppState.selectedIndex;
+        AppState.currentChunkEnd = AppState.selectedIndex;
+
+        Elements.display.textContent = `Start from: ${AppState.words[AppState.selectedIndex]}`;
+
+        UI.setStatus(`Start point: word ${AppState.selectedIndex + 1}`);
+        UI.updateStats();
+
+        TextRenderer.render();
+      }
+    };
+
+    function bindEvents() {
+      Elements.playButton.addEventListener("click", () => {
+        ReaderEngine.togglePlayback();
+      });
+
+      Elements.resetButton.addEventListener("click", () => {
+        ReaderEngine.reset();
+      });
+
+      Elements.sourceText.addEventListener("paste", event => {
+        event.preventDefault();
+
+        const pastedText = event.clipboardData.getData("text/plain");
+        document.execCommand("insertText", false, pastedText);
+      });
+
+      Elements.sourceText.addEventListener("input", () => {
+        if (AppState.isPlaying) return;
+
+        AppState.rawText = TextTools.getPlainTextFromSource();
+        AppState.isPrepared = false;
+        AppState.selectedIndex = 0;
+        AppState.currentIndex = 0;
+
+        UI.setStatus("Ready");
+        UI.updateIdleStats();
+      });
+
+      Elements.sourceText.addEventListener("click", event => {
+        const wordElement = event.target.closest(".word");
+        if (!wordElement) return;
+
+        const index = Number(wordElement.dataset.index);
+        ReaderEngine.setStartIndex(index);
+      });
+
+      [
+        Elements.warmupWpmInput,
+        Elements.targetWpmInput,
+        Elements.rampSecondsInput,
+        Elements.chunkInput
+      ].forEach(input => {
+        input.addEventListener("change", () => {
+          Storage.saveSettings();
         });
-      }
+      });
     }
 
-    function startReading() {
-      if (timer !== null) return;
+    function initApp() {
+      Storage.loadSettings();
+      bindEvents();
 
-      if (!isPrepared) {
-        prepareWords();
-      }
-
-      if (words.length === 0) {
-        display.textContent = "Paste text below first";
-        statusPill.textContent = "No text";
-        return;
-      }
-
-      statusPill.textContent = "Playing";
-
-      const settings = getSettings();
-      const delay = (60000 / settings.wpm) * settings.chunkSize;
-
-      showNextChunk();
-
-      timer = setInterval(showNextChunk, delay);
+      UI.setStatus("Ready");
+      UI.setPlayButton(false);
+      UI.updateSpeedPill(0);
+      UI.updateIdleStats();
     }
 
-    function showNextChunk() {
-      const settings = getSettings();
-
-      if (currentIndex >= words.length) {
-        pauseReading();
-        display.textContent = "Finished";
-        statusPill.textContent = "Finished";
-        updateStats();
-        return;
-      }
-
-      currentChunkStart = currentIndex;
-      currentChunkEnd = Math.min(currentIndex + settings.chunkSize, words.length);
-
-      const chunk = words.slice(currentChunkStart, currentChunkEnd);
-      display.textContent = chunk.join(" ");
-
-      currentIndex = currentChunkEnd;
-
-      renderTextWithHighlights();
-      updateStats();
-    }
-
-    function pauseReading() {
-      clearInterval(timer);
-      timer = null;
-
-      if (words.length > 0 && currentIndex < words.length) {
-        statusPill.textContent = "Paused";
-      }
-    }
-
-    function resetReading() {
-      pauseReading();
-
-      currentIndex = 0;
-      currentChunkStart = 0;
-      currentChunkEnd = 0;
-      words = [];
-      isPrepared = false;
-
-      textInput.innerText = rawText;
-
-      display.textContent = rawText.length > 0
-        ? "Press Start to begin"
-        : "Paste text below to begin";
-
-      statusPill.textContent = "Ready";
-      updateIdleStats();
-    }
-
-    function updateStats() {
-      const completed = Math.min(currentIndex, words.length);
-      const percentage = words.length === 0 ? 0 : (completed / words.length) * 100;
-
-      stats.textContent = `Progress: ${completed} / ${words.length} words`;
-      progressFill.style.width = percentage + "%";
-    }
-
-    function updateIdleStats() {
-      const idleWords = rawText.length === 0
-        ? []
-        : rawText.split(/\s+/).filter(word => word.length > 0);
-
-      stats.textContent = `Progress: 0 / ${idleWords.length} words`;
-      progressFill.style.width = "0%";
-    }
-
-    function escapeHtml(text) {
-      return text
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
+    initApp();
   </script>
 </body>
 </html>

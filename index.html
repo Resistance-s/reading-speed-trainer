@@ -28,6 +28,7 @@
     body {
       margin: 0;
       height: 100vh;
+      height: 100dvh;
       font-family: Arial, Helvetica, sans-serif;
       background:
         radial-gradient(circle at top left, rgba(93, 214, 255, 0.16), transparent 35%),
@@ -39,6 +40,7 @@
 
     .app {
       height: 100vh;
+      height: 100dvh;
       display: grid;
       grid-template-rows: 1fr auto 25vh;
       gap: 14px;
@@ -171,6 +173,7 @@
       color: var(--text);
       background: #253248;
       transition: transform 0.08s ease, background 0.15s ease, opacity 0.15s ease;
+      touch-action: manipulation;
     }
 
     button:hover {
@@ -219,7 +222,6 @@
 
     .text-panel-header {
       display: flex;
-      justify-content: space-between;
       align-items: center;
       gap: 12px;
       padding: 10px 14px;
@@ -228,15 +230,30 @@
 
     .text-panel-header strong {
       font-size: 14px;
+      white-space: nowrap;
     }
 
     .text-panel-header span {
+      margin-left: auto;
       color: var(--muted);
       font-size: 12px;
+      white-space: nowrap;
     }
 
     #sourceText {
       flex: 1;
+      min-width: 120px;
+      max-width: 620px;
+      width: auto;
+      padding: 7px 10px;
+      color: #dce7f5;
+      font-family: inherit;
+      font-size: 14px;
+    }
+
+    #sourceTrace {
+      flex: 1;
+      min-height: 0;
       overflow-y: auto;
       padding: 16px 18px;
       outline: none;
@@ -247,7 +264,7 @@
       word-break: break-word;
     }
 
-    #sourceText:empty::before {
+    #sourceTrace:empty::before {
       content: "Paste your text here. Click any word while stopped to choose where reading starts.";
       color: #6f7b8d;
     }
@@ -292,6 +309,35 @@
       transition: width 0.15s linear;
     }
 
+    body.reading-mode .app {
+      grid-template-rows: minmax(0, 1fr) auto minmax(110px, 18vh);
+    }
+
+    body.reading-mode .control-group,
+    body.reading-mode #resetButton,
+    body.reading-mode #sourceText {
+      display: none;
+    }
+
+    body.reading-mode .controls-panel {
+      padding: 8px;
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+    }
+
+    body.reading-mode #playButton {
+      min-width: 150px;
+      font-size: 17px;
+      padding: 12px 24px;
+    }
+
+    body.reading-mode #sourceTrace {
+      padding: 10px 14px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
     @media (max-width: 700px) {
       .app {
         padding: 10px;
@@ -330,8 +376,21 @@
         font-size: clamp(36px, 11vw, 70px);
       }
 
-      #sourceText {
+      #sourceText,
+      #sourceTrace {
         font-size: 16px;
+      }
+
+      #sourceText {
+        min-width: 0;
+      }
+
+      body.reading-mode .app {
+        grid-template-rows: minmax(0, 1fr) auto minmax(96px, 16vh);
+      }
+
+      body.reading-mode .title-block p {
+        display: none;
       }
     }
   </style>
@@ -386,6 +445,7 @@
     <section class="text-panel">
       <div class="text-panel-header">
         <strong>Source text</strong>
+        <input id="sourceText" type="text" aria-label="Source text" placeholder="Paste or edit text here" />
         <span id="stats">Progress: 0 / 0 words</span>
       </div>
 
@@ -393,7 +453,7 @@
         <div id="progressFill"></div>
       </div>
 
-      <div id="sourceText" contenteditable="true"></div>
+      <div id="sourceTrace" aria-label="Source text trace"></div>
     </section>
   </main>
 
@@ -404,8 +464,9 @@
       Structure designed for future expansion:
       - AppState stores all app data.
       - Elements stores all DOM references.
-      - Storage will later handle settings/history.
-      - TextRenderer handles source text display/highlighting.
+      - SettingsRepository isolates local settings persistence.
+      - TextDocument owns input-to-state synchronization.
+      - SourceTrace handles read-only source highlighting.
       - ReaderEngine handles playback and speed ramp timing.
 
       Future additions can be added as new modules:
@@ -431,6 +492,7 @@
 
     const Elements = {
       sourceText: document.getElementById("sourceText"),
+      sourceTrace: document.getElementById("sourceTrace"),
       display: document.getElementById("display"),
       stats: document.getElementById("stats"),
       statusPill: document.getElementById("statusPill"),
@@ -444,19 +506,23 @@
       chunkInput: document.getElementById("chunkInput")
     };
 
-    const Storage = {
+    const SettingsRepository = {
       settingsKey: "readingTrainer.settings.v1",
 
       saveSettings() {
-        const settings = ReaderEngine.getSettings();
-        localStorage.setItem(this.settingsKey, JSON.stringify(settings));
+        try {
+          const settings = ReaderEngine.getSettings();
+          localStorage.setItem(this.settingsKey, JSON.stringify(settings));
+        } catch {
+          console.warn("Settings could not be saved.");
+        }
       },
 
       loadSettings() {
-        const saved = localStorage.getItem(this.settingsKey);
-        if (!saved) return;
-
         try {
+          const saved = localStorage.getItem(this.settingsKey);
+          if (!saved) return;
+
           const settings = JSON.parse(saved);
 
           if (settings.warmupWpm) Elements.warmupWpmInput.value = settings.warmupWpm;
@@ -479,21 +545,24 @@
 
       escapeHtml(text) {
         return text
-          .replaceAll("&", "&amp;")
-          .replaceAll("<", "&lt;")
-          .replaceAll(">", "&gt;")
-          .replaceAll('"', "&quot;")
-          .replaceAll("'", "&#039;");
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
       },
 
       getPlainTextFromSource() {
-        return Elements.sourceText.innerText.trim();
+        return Elements.sourceText.value.trim();
       }
     };
 
-    const TextRenderer = {
-      render() {
-        if (AppState.words.length === 0) return;
+    const SourceTrace = {
+      render({ scroll = true } = {}) {
+        if (AppState.words.length === 0) {
+          Elements.sourceTrace.textContent = "";
+          return;
+        }
 
         const html = AppState.words.map((word, index) => {
           const safeWord = TextTools.escapeHtml(word);
@@ -510,9 +579,9 @@
           return `<span class="${classes.join(" ")}" data-index="${index}" id="word-${index}">${safeWord}</span>`;
         }).join(" ");
 
-        Elements.sourceText.innerHTML = html;
+        Elements.sourceTrace.innerHTML = html;
 
-        this.scrollToActiveWord();
+        if (scroll) this.scrollToActiveWord();
       },
 
       scrollToActiveWord() {
@@ -529,10 +598,24 @@
             inline: "nearest"
           });
         }
-      },
+      }
+    };
 
-      showEditableRawText() {
-        Elements.sourceText.innerText = AppState.rawText;
+    const TextDocument = {
+      syncFromEditor({ preserveSelection = false, scrollTrace = true } = {}) {
+        AppState.rawText = TextTools.getPlainTextFromSource();
+        AppState.words = TextTools.splitIntoWords(AppState.rawText);
+
+        const maxIndex = Math.max(AppState.words.length - 1, 0);
+        AppState.selectedIndex = preserveSelection
+          ? Math.min(AppState.selectedIndex, maxIndex)
+          : 0;
+        AppState.currentIndex = AppState.selectedIndex;
+        AppState.currentChunkStart = AppState.selectedIndex;
+        AppState.currentChunkEnd = AppState.selectedIndex;
+        AppState.isPrepared = true;
+
+        SourceTrace.render({ scroll: scrollTrace });
       }
     };
 
@@ -546,6 +629,7 @@
         Elements.playButton.textContent = isPlaying ? "Stop" : "Start";
         Elements.playButton.classList.toggle("stop", isPlaying);
         Elements.playButton.classList.toggle("primary", !isPlaying);
+        document.body.classList.toggle("reading-mode", isPlaying);
       },
 
       updateStats() {
@@ -587,15 +671,7 @@
       },
 
       prepareFromText() {
-        AppState.rawText = TextTools.getPlainTextFromSource();
-        AppState.words = TextTools.splitIntoWords(AppState.rawText);
-
-        AppState.currentIndex = Math.min(AppState.selectedIndex, Math.max(AppState.words.length - 1, 0));
-        AppState.currentChunkStart = AppState.currentIndex;
-        AppState.currentChunkEnd = AppState.currentIndex;
-        AppState.isPrepared = true;
-
-        TextRenderer.render();
+        TextDocument.syncFromEditor({ preserveSelection: true });
         UI.updateStats();
       },
 
@@ -608,9 +684,7 @@
       },
 
       start() {
-        if (!AppState.isPrepared) {
-          this.prepareFromText();
-        }
+        this.prepareFromText();
 
         if (AppState.words.length === 0) {
           Elements.display.textContent = "Paste text below first";
@@ -622,7 +696,8 @@
           AppState.currentIndex = AppState.selectedIndex || 0;
         }
 
-        Storage.saveSettings();
+        Elements.sourceText.blur();
+        SettingsRepository.saveSettings();
 
         AppState.isPlaying = true;
         AppState.playbackStartTime = Date.now();
@@ -648,7 +723,7 @@
         UI.setStatus("Stopped");
         UI.setPlayButton(false);
 
-        TextRenderer.render();
+        SourceTrace.render();
       },
 
       reset() {
@@ -663,8 +738,6 @@
         AppState.isPrepared = false;
         AppState.activeSession = null;
 
-        TextRenderer.showEditableRawText();
-
         Elements.display.textContent = AppState.rawText.length > 0
           ? "Press Start to begin"
           : "Paste text below to begin";
@@ -673,6 +746,7 @@
         UI.setPlayButton(false);
         UI.updateSpeedPill(0);
         UI.updateIdleStats();
+        SourceTrace.render();
       },
 
       playNextChunk() {
@@ -701,7 +775,7 @@
 
         UI.updateSpeedPill(currentWpm);
         UI.updateStats();
-        TextRenderer.render();
+        SourceTrace.render();
 
         AppState.timeoutId = setTimeout(() => {
           this.playNextChunk();
@@ -769,7 +843,7 @@
         UI.setStatus(`Start point: word ${AppState.selectedIndex + 1}`);
         UI.updateStats();
 
-        TextRenderer.render();
+        SourceTrace.render();
       }
     };
 
@@ -782,26 +856,16 @@
         ReaderEngine.reset();
       });
 
-      Elements.sourceText.addEventListener("paste", event => {
-        event.preventDefault();
-
-        const pastedText = event.clipboardData.getData("text/plain");
-        document.execCommand("insertText", false, pastedText);
-      });
-
       Elements.sourceText.addEventListener("input", () => {
         if (AppState.isPlaying) return;
 
-        AppState.rawText = TextTools.getPlainTextFromSource();
-        AppState.isPrepared = false;
-        AppState.selectedIndex = 0;
-        AppState.currentIndex = 0;
+        TextDocument.syncFromEditor({ scrollTrace: false });
 
         UI.setStatus("Ready");
         UI.updateIdleStats();
       });
 
-      Elements.sourceText.addEventListener("click", event => {
+      Elements.sourceTrace.addEventListener("click", event => {
         const wordElement = event.target.closest(".word");
         if (!wordElement) return;
 
@@ -816,19 +880,20 @@
         Elements.chunkInput
       ].forEach(input => {
         input.addEventListener("change", () => {
-          Storage.saveSettings();
+          SettingsRepository.saveSettings();
         });
       });
     }
 
     function initApp() {
-      Storage.loadSettings();
+      SettingsRepository.loadSettings();
       bindEvents();
 
       UI.setStatus("Ready");
       UI.setPlayButton(false);
       UI.updateSpeedPill(0);
       UI.updateIdleStats();
+      SourceTrace.render();
     }
 
     initApp();

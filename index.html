@@ -7,18 +7,19 @@
 
   <style>
     :root {
-      --bg: #080b10;
-      --panel: #111722;
-      --panel-light: #172131;
-      --border: #2c3a4f;
-      --text: #f4f7fb;
-      --muted: #9da9bb;
-      --accent: #5dd6ff;
-      --accent-soft: rgba(93, 214, 255, 0.15);
-      --highlight: #ffe066;
-      --highlight-text: #111;
-      --danger: #ff6b6b;
-      --success: #6ee7b7;
+      --bg: #110A0A;
+      --panel: #1A1111;
+      --panel-light: #2D1D1B;
+      --border: #46302C;
+      --text: #F3EDEA;
+      --muted: #B8A09A;
+      --accent: #E24A3B;
+      --accent-soft: rgba(226, 74, 59, 0.16);
+      --highlight: #B88A52;
+      --highlight-text: #110A0A;
+      --danger: #E26B5C;
+      --success: #FF7A59;
+      --bronze: #B88A52;
     }
 
     * {
@@ -31,8 +32,8 @@
       height: 100dvh;
       font-family: Arial, Helvetica, sans-serif;
       background:
-        radial-gradient(circle at top left, rgba(93, 214, 255, 0.16), transparent 35%),
-        radial-gradient(circle at bottom right, rgba(120, 90, 255, 0.14), transparent 35%),
+        radial-gradient(circle at top left, rgba(226, 74, 59, 0.15), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(122, 34, 29, 0.18), transparent 38%),
         var(--bg);
       color: var(--text);
       overflow: hidden;
@@ -150,7 +151,7 @@
 
     input {
       width: 82px;
-      background: #0b111a;
+      background: var(--panel);
       border: 1px solid var(--border);
       color: var(--text);
       border-radius: 9px;
@@ -171,13 +172,13 @@
       font-size: 15px;
       cursor: pointer;
       color: var(--text);
-      background: #253248;
+      background: var(--panel-light);
       transition: transform 0.08s ease, background 0.15s ease, opacity 0.15s ease;
       touch-action: manipulation;
     }
 
     button:hover {
-      background: #334563;
+      background: #3b2825;
     }
 
     button:active {
@@ -185,24 +186,24 @@
     }
 
     .primary {
-      background: linear-gradient(135deg, #1c9ee8, #44d4ff);
-      color: #06111a;
+      background: linear-gradient(135deg, var(--accent), #ff7156);
+      color: var(--text);
       font-weight: 700;
     }
 
     .primary:hover {
-      background: linear-gradient(135deg, #35b8ff, #6ce0ff);
+      background: linear-gradient(135deg, #ef5d4c, var(--success));
     }
 
     .stop {
-      background: linear-gradient(135deg, #ff7a59, #ffb86c);
-      color: #180b06;
+      background: linear-gradient(135deg, #7A221D, var(--accent));
+      color: var(--text);
       font-weight: 700;
     }
 
     .danger {
       background: rgba(255, 107, 107, 0.14);
-      color: #ffb7b7;
+      color: #f3b0a7;
       border: 1px solid rgba(255, 107, 107, 0.25);
     }
 
@@ -246,7 +247,7 @@
       max-width: 620px;
       width: auto;
       padding: 7px 10px;
-      color: #dce7f5;
+      color: var(--text);
       font-family: inherit;
       font-size: 14px;
     }
@@ -257,7 +258,7 @@
       overflow-y: auto;
       padding: 16px 18px;
       outline: none;
-      color: #dce7f5;
+      color: var(--text);
       font-size: 18px;
       line-height: 1.7;
       white-space: pre-wrap;
@@ -266,7 +267,7 @@
 
     #sourceTrace:empty::before {
       content: "Paste your text here. Click any word while stopped to choose where reading starts.";
-      color: #6f7b8d;
+      color: #7F625C;
     }
 
     .word {
@@ -282,7 +283,7 @@
 
     .word.selected {
       background: rgba(93, 214, 255, 0.32);
-      color: #ffffff;
+      color: var(--text);
       box-shadow: 0 0 0 2px rgba(93, 214, 255, 0.12);
     }
 
@@ -293,7 +294,7 @@
     }
 
     .word.past {
-      color: #7f8ca1;
+      color: #7F625C;
     }
 
     .progress-bar {
@@ -302,10 +303,98 @@
       overflow: hidden;
     }
 
+    .page-nav {
+      position: fixed;
+      z-index: 10;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 6px;
+      padding: 5px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(26, 17, 17, 0.92);
+      backdrop-filter: blur(10px);
+    }
+
+    .page-nav.hidden { display: none; }
+
+    .page-nav button {
+      padding: 8px 11px;
+      font-size: 13px;
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .page-nav button.active { background: var(--panel-light); color: var(--text); }
+    .page { display: none; }
+    .page.active { display: grid; }
+    .reader-page .top-bar { padding: 66px 22px 18px; }
+
+    .planner-app {
+      grid-template-rows: auto minmax(0, 1fr);
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    .home-app { grid-template-rows: minmax(0, 1fr); max-width: 760px; margin: 0 auto; }
+    .home-panel { display: grid; grid-template-columns: 1fr; grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: stretch; }
+    .home-choice { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: clamp(20px, 6vw, 58px); padding: 24px 36px; border: 1px solid var(--border); border-radius: 24px; background: linear-gradient(145deg, rgba(45,29,27,.96), rgba(26,17,17,.94)); color: var(--text); font-size: clamp(26px, 4vw, 38px); font-weight: 700; box-shadow: 0 20px 60px rgba(36, 8, 7, .35); }
+    .home-choice::after { content: ""; position: absolute; inset: auto -20% -45% auto; width: 90%; aspect-ratio: 1; background: radial-gradient(circle, rgba(255,122,89,.2), transparent 65%); }
+    .home-choice:hover { border-color: var(--accent); background: linear-gradient(145deg, rgba(122,34,29,.75), rgba(45,29,27,.96)); }
+    .home-choice img { position: relative; z-index: 1; width: min(34vw, 190px); aspect-ratio: 1; object-fit: contain; }
+    .home-choice span { position: relative; z-index: 1; }
+
+    .planner-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 66px 4px 4px;
+    }
+
+    .planner-header h1 { margin: 0; font-size: 28px; }
+    .planner-header p { margin: 5px 0 0; color: var(--muted); }
+    #plannerDate { color: var(--accent); font-size: 14px; white-space: nowrap; }
+    .list-switcher { display: inline-flex; gap: 4px; margin-top: 17px; padding: 4px; border: 1px solid var(--border-soft, #35201C); border-radius: 11px; background: rgba(17,10,10,.42); }
+    .list-switcher button { padding: 8px 13px; background: transparent; color: var(--muted); font-size: 13px; }
+    .list-switcher button.active { background: var(--accent); color: var(--text); }
+
+    .planner-panel {
+      min-height: 0;
+      overflow-y: auto;
+      padding: 22px;
+      background: linear-gradient(180deg, rgba(23, 33, 49, .92), rgba(13, 18, 27, .96));
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .35);
+    }
+
+    .task-form { display: grid; grid-template-columns: minmax(0, 1fr) 135px auto; gap: 10px; align-items: center; }
+    .task-form input { width: 100%; }
+    select { width: 100%; background: var(--panel); border: 1px solid var(--border); color: var(--text); border-radius: 9px; padding: 10px; font-size: 14px; outline: none; }
+    select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    #weeklyDays { display: none; grid-column: 1 / -1; gap: 7px; grid-template-columns: repeat(7, 1fr); }
+    #weeklyDays.visible { display: grid; }
+    .day-choice { display: flex; align-items: center; justify-content: center; gap: 4px; color: var(--muted); font-size: 12px; padding: 7px 4px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 8px; cursor: pointer; }
+    .day-choice input { width: auto; accent-color: var(--accent); }
+    .task-summary { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin: 27px 0 12px; color: var(--muted); font-size: 14px; }
+    .task-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 9px; }
+    .task-item { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid rgba(255,255,255,.08); border-radius: 13px; background: rgba(255,255,255,.035); }
+    .task-item.done { opacity: .58; }
+    .task-item input { width: 20px; height: 20px; accent-color: var(--success); flex: 0 0 auto; }
+    .task-name { flex: 1; line-height: 1.35; }
+    .task-item.done .task-name { text-decoration: line-through; }
+    .recurrence-tag { color: var(--accent); font-size: 12px; background: var(--accent-soft); border-radius: 999px; padding: 5px 8px; white-space: nowrap; }
+    .icon-button { flex: 0 0 auto; padding: 7px 10px; color: #f3b0a7; background: transparent; }
+    .icon-button:hover { background: rgba(255,107,107,.14); }
+    .empty-tasks { padding: 38px 15px; color: var(--muted); text-align: center; border: 1px dashed var(--border); border-radius: 13px; }
+
     #progressFill {
       height: 100%;
       width: 0%;
-      background: linear-gradient(90deg, #1c9ee8, #44d4ff);
+      background: linear-gradient(90deg, var(--accent), var(--success));
       transition: width 0.15s linear;
     }
 
@@ -350,6 +439,19 @@
         align-items: flex-start;
         gap: 10px;
       }
+
+      .page-nav { top: 9px; left: 50%; }
+      .page-nav button { padding: 7px 8px; font-size: 12px; }
+      .title-block { padding-right: 135px; }
+      .reader-page .top-bar { padding: 54px 14px 14px; }
+      .planner-header { display: block; padding-top: 52px; }
+      #plannerDate { display: block; margin-top: 9px; }
+      .planner-panel { padding: 14px; border-radius: 18px; }
+      .task-form { grid-template-columns: 1fr 110px; }
+      .task-form button { grid-column: 1 / -1; }
+      #weeklyDays { grid-template-columns: repeat(4, 1fr); }
+      .home-choice { gap: 20px; padding: 16px 22px; }
+      .home-choice img { width: min(38vw, 155px); }
 
       .title-block h1 {
         font-size: 18px;
@@ -397,7 +499,26 @@
 </head>
 
 <body>
-  <main class="app">
+  <nav class="page-nav" aria-label="App pages">
+    <button id="homePageButton" class="active" type="button">Home</button>
+    <button id="readerPageButton" type="button">Reader</button>
+    <button id="plannerPageButton" type="button">Daily list</button>
+  </nav>
+
+  <main class="app page home-app active" id="homePage">
+    <section class="home-panel">
+      <button class="home-choice" type="button" data-go-to="reader">
+        <img src="assets-eclipse-moth.png" alt="Eclipse moth mascot" />
+        <span>Reader</span>
+      </button>
+      <button class="home-choice" type="button" data-go-to="planner">
+        <img src="assets-ember-salamander.png" alt="Ember salamander mascot" />
+        <span>Checklist</span>
+      </button>
+    </section>
+  </main>
+
+  <main class="app page reader-page" id="readerPage">
     <section class="reader-panel">
       <div class="top-bar">
         <div class="title-block">
@@ -457,6 +578,47 @@
     </section>
   </main>
 
+  <main class="app page planner-app" id="plannerPage">
+    <header class="planner-header">
+      <div>
+        <h1>Daily checklist</h1>
+        <p>Plan ahead, then let scheduled tasks return when they are due.</p>
+        <div class="list-switcher" aria-label="Checklist day">
+          <button id="todayListButton" class="active" type="button">Today</button>
+          <button id="tomorrowListButton" type="button">Tomorrow</button>
+        </div>
+      </div>
+      <time id="plannerDate"></time>
+    </header>
+
+    <section class="planner-panel">
+      <form class="task-form" id="taskForm">
+        <input id="taskTitleInput" type="text" maxlength="160" placeholder="What needs to get done?" aria-label="Task name" required />
+        <select id="recurrenceInput" aria-label="Task schedule">
+          <option value="once">Today only</option>
+          <option value="daily">Every day</option>
+          <option value="weekly">Weekly</option>
+        </select>
+        <button class="primary" type="submit">Add task</button>
+        <div id="weeklyDays" aria-label="Weekly schedule">
+          <label class="day-choice"><input type="checkbox" value="1" />Mon</label>
+          <label class="day-choice"><input type="checkbox" value="2" />Tue</label>
+          <label class="day-choice"><input type="checkbox" value="3" />Wed</label>
+          <label class="day-choice"><input type="checkbox" value="4" />Thu</label>
+          <label class="day-choice"><input type="checkbox" value="5" />Fri</label>
+          <label class="day-choice"><input type="checkbox" value="6" />Sat</label>
+          <label class="day-choice"><input type="checkbox" value="0" />Sun</label>
+        </div>
+      </form>
+
+      <div class="task-summary">
+        <span id="taskSummary">0 tasks for today</span>
+        <span id="taskProgress">0 complete</span>
+      </div>
+      <ul id="taskList" class="task-list" aria-live="polite"></ul>
+    </section>
+  </main>
+
   <script>
     /*
       Reading Speed Trainer
@@ -492,6 +654,7 @@
 
     const Elements = {
       sourceText: document.getElementById("sourceText"),
+      pageNav: document.querySelector(".page-nav"),
       sourceTrace: document.getElementById("sourceTrace"),
       display: document.getElementById("display"),
       stats: document.getElementById("stats"),
@@ -503,7 +666,23 @@
       warmupWpmInput: document.getElementById("warmupWpmInput"),
       targetWpmInput: document.getElementById("targetWpmInput"),
       rampSecondsInput: document.getElementById("rampSecondsInput"),
-      chunkInput: document.getElementById("chunkInput")
+      chunkInput: document.getElementById("chunkInput"),
+      homePage: document.getElementById("homePage"),
+      readerPage: document.getElementById("readerPage"),
+      plannerPage: document.getElementById("plannerPage"),
+      homePageButton: document.getElementById("homePageButton"),
+      readerPageButton: document.getElementById("readerPageButton"),
+      plannerPageButton: document.getElementById("plannerPageButton"),
+      taskForm: document.getElementById("taskForm"),
+      taskTitleInput: document.getElementById("taskTitleInput"),
+      recurrenceInput: document.getElementById("recurrenceInput"),
+      weeklyDays: document.getElementById("weeklyDays"),
+      taskList: document.getElementById("taskList"),
+      taskSummary: document.getElementById("taskSummary"),
+      taskProgress: document.getElementById("taskProgress"),
+      plannerDate: document.getElementById("plannerDate"),
+      todayListButton: document.getElementById("todayListButton"),
+      tomorrowListButton: document.getElementById("tomorrowListButton")
     };
 
     const SettingsRepository = {
@@ -630,6 +809,10 @@
         Elements.playButton.classList.toggle("stop", isPlaying);
         Elements.playButton.classList.toggle("primary", !isPlaying);
         document.body.classList.toggle("reading-mode", isPlaying);
+        Elements.pageNav.classList.toggle(
+          "hidden",
+          isPlaying || Elements.homePage.classList.contains("active")
+        );
       },
 
       updateStats() {
@@ -847,6 +1030,184 @@
       }
     };
 
+    const Planner = {
+      storageKey: "readingTrainer.dailyChecklist.v1",
+      data: { currentDate: "", days: {}, templates: [] },
+      viewOffset: 0,
+
+      getDateKey(date = new Date()) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      },
+
+      load() {
+        try {
+          const saved = JSON.parse(localStorage.getItem(this.storageKey));
+          if (saved && Array.isArray(saved.templates)) {
+            this.data = saved.days
+              ? { currentDate: saved.currentDate || "", days: saved.days, templates: saved.templates }
+              : { currentDate: saved.currentDate || "", days: { [saved.currentDate]: saved.entries || [] }, templates: saved.templates };
+          }
+        } catch {
+          console.warn("Checklist could not be loaded.");
+        }
+        this.ensureCurrentDay();
+      },
+
+      save() {
+        try {
+          localStorage.setItem(this.storageKey, JSON.stringify(this.data));
+        } catch {
+          console.warn("Checklist could not be saved.");
+        }
+      },
+
+      isDueToday(template, date = new Date()) {
+        return template.recurrence === "daily" ||
+          (template.recurrence === "weekly" && template.days.includes(date.getDay()));
+      },
+
+      dateFromKey(key) {
+        const [year, month, day] = key.split("-").map(Number);
+        return new Date(year, month - 1, day);
+      },
+
+      getKeyForOffset(offset) {
+        const date = new Date();
+        date.setDate(date.getDate() + offset);
+        return this.getDateKey(date);
+      },
+
+      ensureDay(key) {
+        const date = this.dateFromKey(key);
+        const entries = this.data.days[key] || [];
+        const recurringEntries = this.data.templates
+          .filter(template => this.isDueToday(template, date))
+          .filter(template => !entries.some(entry => entry.templateId === template.id))
+          .map(template => ({
+            id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+            templateId: template.id,
+            title: template.title,
+            completed: false
+          }));
+        this.data.days[key] = [...entries, ...recurringEntries];
+      },
+
+      ensureCurrentDay() {
+        const today = this.getDateKey();
+        const tomorrow = this.getKeyForOffset(1);
+        this.data.currentDate = today;
+        this.ensureDay(today);
+        this.ensureDay(tomorrow);
+        Object.keys(this.data.days).forEach(key => {
+          if (key !== today && key !== tomorrow) delete this.data.days[key];
+        });
+        this.save();
+      },
+
+      addTask(title, recurrence, days) {
+        const cleanTitle = title.trim();
+        if (!cleanTitle) return;
+
+        const id = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+        const dateKey = this.getKeyForOffset(this.viewOffset);
+        if (recurrence === "once") {
+          this.data.days[dateKey].push({ id, title: cleanTitle, completed: false });
+        } else {
+          const template = { id, title: cleanTitle, recurrence, days };
+          this.data.templates.push(template);
+          if (this.isDueToday(template, this.dateFromKey(dateKey))) {
+            this.data.days[dateKey].push({ id: `${id}-${dateKey}`, templateId: id, title: cleanTitle, completed: false });
+          }
+        }
+        this.save();
+        this.render();
+      },
+
+      toggleTask(id) {
+        const task = this.data.days[this.getKeyForOffset(this.viewOffset)].find(entry => entry.id === id);
+        if (!task) return;
+        task.completed = !task.completed;
+        this.save();
+        this.render();
+      },
+
+      removeTask(id) {
+        const dateKey = this.getKeyForOffset(this.viewOffset);
+        const task = this.data.days[dateKey].find(entry => entry.id === id);
+        if (!task) return;
+        this.data.days[dateKey] = this.data.days[dateKey].filter(entry => entry.id !== id);
+        if (task.templateId) {
+          this.data.templates = this.data.templates.filter(template => template.id !== task.templateId);
+          Object.values(this.data.days).forEach(entries => {
+            const index = entries.findIndex(entry => entry.templateId === task.templateId);
+            if (index !== -1) entries.splice(index, 1);
+          });
+        }
+        this.save();
+        this.render();
+      },
+
+      recurrenceLabel(task) {
+        if (!task.templateId) return this.viewOffset ? "Tomorrow" : "Today";
+        const template = this.data.templates.find(item => item.id === task.templateId);
+        if (!template) return "Today";
+        if (template.recurrence === "daily") return "Daily";
+        const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        return template.days.map(day => dayNames[day]).join(", ");
+      },
+
+      render() {
+        this.ensureCurrentDay();
+        const dateKey = this.getKeyForOffset(this.viewOffset);
+        const selectedDate = this.dateFromKey(dateKey);
+        const entries = this.data.days[dateKey];
+        Elements.plannerDate.dateTime = dateKey;
+        Elements.plannerDate.textContent = selectedDate.toLocaleDateString(undefined, {
+          weekday: "long", month: "long", day: "numeric"
+        });
+        Elements.todayListButton.classList.toggle("active", this.viewOffset === 0);
+        Elements.tomorrowListButton.classList.toggle("active", this.viewOffset === 1);
+
+        const total = entries.length;
+        const complete = entries.filter(task => task.completed).length;
+        Elements.taskSummary.textContent = `${total} task${total === 1 ? "" : "s"} for ${this.viewOffset ? "tomorrow" : "today"}`;
+        Elements.taskProgress.textContent = `${complete} complete`;
+
+        if (total === 0) {
+          Elements.taskList.innerHTML = '<li class="empty-tasks">Nothing on the list yet. Add a task above.</li>';
+          return;
+        }
+
+        Elements.taskList.innerHTML = entries.map(task => `
+          <li class="task-item${task.completed ? " done" : ""}">
+            <input type="checkbox" data-task-toggle="${task.id}" ${task.completed ? "checked" : ""} aria-label="Mark ${TextTools.escapeHtml(task.title)} complete" />
+            <span class="task-name">${TextTools.escapeHtml(task.title)}</span>
+            <span class="recurrence-tag">${this.recurrenceLabel(task)}</span>
+            <button class="icon-button" type="button" data-task-delete="${task.id}" aria-label="Delete ${TextTools.escapeHtml(task.title)}">Delete</button>
+          </li>
+        `).join("");
+      }
+    };
+
+    const PageNavigation = {
+      show(page) {
+        const plannerVisible = page === "planner";
+        const readerVisible = page === "reader";
+        if (!readerVisible && AppState.isPlaying) ReaderEngine.stop();
+        Elements.homePage.classList.toggle("active", page === "home");
+        Elements.readerPage.classList.toggle("active", readerVisible);
+        Elements.plannerPage.classList.toggle("active", plannerVisible);
+        Elements.homePageButton.classList.toggle("active", page === "home");
+        Elements.readerPageButton.classList.toggle("active", readerVisible);
+        Elements.plannerPageButton.classList.toggle("active", plannerVisible);
+        Elements.pageNav.classList.toggle("hidden", page === "home");
+        if (plannerVisible) Planner.render();
+      }
+    };
+
     function bindEvents() {
       Elements.playButton.addEventListener("click", () => {
         ReaderEngine.togglePlayback();
@@ -883,10 +1244,56 @@
           SettingsRepository.saveSettings();
         });
       });
+
+      Elements.homePageButton.addEventListener("click", () => PageNavigation.show("home"));
+      Elements.readerPageButton.addEventListener("click", () => PageNavigation.show("reader"));
+      Elements.plannerPageButton.addEventListener("click", () => PageNavigation.show("planner"));
+      document.querySelectorAll("[data-go-to]").forEach(button => {
+        button.addEventListener("click", () => PageNavigation.show(button.dataset.goTo));
+      });
+
+      Elements.todayListButton.addEventListener("click", () => {
+        Planner.viewOffset = 0;
+        Planner.render();
+      });
+      Elements.tomorrowListButton.addEventListener("click", () => {
+        Planner.viewOffset = 1;
+        Planner.render();
+      });
+
+      Elements.recurrenceInput.addEventListener("change", () => {
+        Elements.weeklyDays.classList.toggle("visible", Elements.recurrenceInput.value === "weekly");
+      });
+
+      Elements.taskForm.addEventListener("submit", event => {
+        event.preventDefault();
+        const recurrence = Elements.recurrenceInput.value;
+        const days = [...Elements.weeklyDays.querySelectorAll("input:checked")].map(input => Number(input.value));
+        if (recurrence === "weekly" && days.length === 0) {
+          Elements.taskTitleInput.setCustomValidity("Choose at least one weekday for a weekly task.");
+          Elements.taskTitleInput.reportValidity();
+          Elements.taskTitleInput.setCustomValidity("");
+          return;
+        }
+        Planner.addTask(Elements.taskTitleInput.value, recurrence, days);
+        Elements.taskForm.reset();
+        Elements.weeklyDays.classList.remove("visible");
+        Elements.taskTitleInput.focus();
+      });
+
+      Elements.taskList.addEventListener("change", event => {
+        if (event.target.matches("[data-task-toggle]")) Planner.toggleTask(event.target.dataset.taskToggle);
+      });
+
+      Elements.taskList.addEventListener("click", event => {
+        const button = event.target.closest("[data-task-delete]");
+        if (button) Planner.removeTask(button.dataset.taskDelete);
+      });
     }
 
     function initApp() {
       SettingsRepository.loadSettings();
+      Planner.load();
       bindEvents();
 
       UI.setStatus("Ready");
@@ -894,6 +1301,8 @@
       UI.updateSpeedPill(0);
       UI.updateIdleStats();
       SourceTrace.render();
+      Planner.render();
+      setInterval(() => Planner.render(), 60 * 1000);
     }
 
     initApp();

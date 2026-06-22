@@ -390,6 +390,24 @@
     .icon-button { flex: 0 0 auto; padding: 7px 10px; color: #f3b0a7; background: transparent; }
     .icon-button:hover { background: rgba(255,107,107,.14); }
     .empty-tasks { padding: 38px 15px; color: var(--muted); text-align: center; border: 1px dashed var(--border); border-radius: 13px; }
+    .difficulty-select { width: 92px; flex: 0 0 auto; padding: 7px; font-size: 12px; }
+    .difficulty-select:disabled { opacity: .55; cursor: not-allowed; }
+    .planner-token-counter { display: inline-flex; align-items: center; margin-top: 12px; padding: 7px 10px; border: 1px solid rgba(184,138,82,.45); border-radius: 999px; color: var(--highlight); background: rgba(184,138,82,.1); font-size: 13px; font-weight: 700; }
+    .reward-wheel-toggle { margin-top: 20px; }
+    .reward-wheel-panel { margin-top: 22px; padding: 18px; border: 1px solid var(--border); border-radius: 16px; background: rgba(255,255,255,.035); text-align: center; }
+    .reward-wheel-panel[hidden] { display: none; }
+    .reward-wheel-panel h2 { margin: 0; font-size: 18px; }
+    .reward-wheel-panel p { margin: 6px 0 14px; color: var(--muted); font-size: 13px; }
+    .reward-wheel-layout { display: flex; align-items: center; justify-content: center; gap: 24px; flex-wrap: wrap; }
+    .wheel-wrap { position: relative; width: 148px; height: 148px; }
+    .wheel-pointer { position: absolute; z-index: 2; top: -4px; left: 50%; width: 0; height: 0; transform: translateX(-50%); border-left: 11px solid transparent; border-right: 11px solid transparent; border-top: 20px solid var(--text); filter: drop-shadow(0 2px 2px rgba(0,0,0,.45)); }
+    .reward-wheel { position: relative; width: 100%; height: 100%; border: 5px solid var(--highlight); border-radius: 50%; background: conic-gradient(var(--panel-light) 0 96%, var(--accent) 96% 99%, var(--highlight) 99% 100%); box-shadow: inset 0 0 0 2px rgba(0,0,0,.25), 0 8px 24px rgba(0,0,0,.25); transition: transform 2.8s cubic-bezier(.13,.76,.18,1); }
+    .reward-wheel::after { content: ""; position: absolute; inset: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); border-radius: 50%; background: var(--text); box-shadow: 0 0 0 5px var(--panel); }
+    .reward-wheel-info { max-width: 330px; text-align: left; }
+    .reward-token-count { color: var(--highlight); font-weight: 700; }
+    .reward-result { min-height: 42px; margin: 12px 0 0; padding: 10px; border-radius: 10px; background: rgba(0,0,0,.18); color: var(--text); font-size: 14px; line-height: 1.35; }
+    .reward-result.empty { color: var(--muted); }
+    .reward-note { margin-top: 14px !important; font-size: 12px !important; }
 
     #progressFill {
       height: 100%;
@@ -450,6 +468,9 @@
       .task-form { grid-template-columns: 1fr 110px; }
       .task-form button { grid-column: 1 / -1; }
       #weeklyDays { grid-template-columns: repeat(4, 1fr); }
+      .difficulty-select { width: 82px; }
+      .task-item { flex-wrap: wrap; }
+      .task-name { min-width: calc(100% - 36px); }
       .home-choice { gap: 20px; padding: 16px 22px; }
       .home-choice img { width: min(38vw, 155px); }
 
@@ -583,6 +604,7 @@
       <div>
         <h1>Daily checklist</h1>
         <p>Plan ahead, then let scheduled tasks return when they are due.</p>
+        <div id="plannerTokenCounter" class="planner-token-counter">0 tokens</div>
         <div class="list-switcher" aria-label="Checklist day">
           <button id="todayListButton" class="active" type="button">Today</button>
           <button id="tomorrowListButton" type="button">Tomorrow</button>
@@ -616,6 +638,19 @@
         <span id="taskProgress">0 complete</span>
       </div>
       <ul id="taskList" class="task-list" aria-live="polite"></ul>
+      <button id="rewardWheelToggle" class="reward-wheel-toggle" type="button" aria-expanded="false" aria-controls="rewardWheelPanel">Show reward wheel</button>
+      <section id="rewardWheelPanel" class="reward-wheel-panel" aria-labelledby="rewardWheelHeading" hidden>
+        <h2 id="rewardWheelHeading">Checklist Reward Wheel</h2>
+        <p>Spins cost 50 tokens.</p>
+        <div class="reward-wheel-layout">
+          <div class="wheel-wrap" aria-hidden="true"><div class="wheel-pointer"></div><div id="rewardWheel" class="reward-wheel"></div></div>
+          <div class="reward-wheel-info">
+            <button id="spinRewardWheelButton" class="primary" type="button" disabled>Spin reward wheel (50 tokens)</button>
+            <div id="rewardResult" class="reward-result empty" role="status">Earn tokens by completing rated tasks.</div>
+          </div>
+        </div>
+        <p class="reward-note">Closed personal reward system only: tokens cannot be bought, sold, transferred, wagered, or exchanged for cash.</p>
+      </section>
     </section>
   </main>
 
@@ -682,7 +717,13 @@
       taskProgress: document.getElementById("taskProgress"),
       plannerDate: document.getElementById("plannerDate"),
       todayListButton: document.getElementById("todayListButton"),
-      tomorrowListButton: document.getElementById("tomorrowListButton")
+      tomorrowListButton: document.getElementById("tomorrowListButton"),
+      rewardWheel: document.getElementById("rewardWheel"),
+      plannerTokenCounter: document.getElementById("plannerTokenCounter"),
+      rewardWheelToggle: document.getElementById("rewardWheelToggle"),
+      rewardWheelPanel: document.getElementById("rewardWheelPanel"),
+      spinRewardWheelButton: document.getElementById("spinRewardWheelButton"),
+      rewardResult: document.getElementById("rewardResult")
     };
 
     const SettingsRepository = {
@@ -1030,6 +1071,110 @@
       }
     };
 
+    /*
+      RewardWheel is deliberately independent from the checklist UI.
+      Any future source (habits, daily goals, etc.) can call
+      RewardWheel.adjustTokens(amount) when its own completion state changes.
+    */
+    const RewardWheel = {
+      storageKey: "readingTrainer.rewardWheel.v1",
+      // Add future rewards here; selection and wheel rendering use this config.
+      config: [
+        {
+          id: "no-reward", label: "No reward this time", weight: 96, color: "var(--panel-light)",
+          createResult: () => "No reward this time. Your token has been used."
+        },
+        {
+          id: "game-spend", label: "Game spend reward", weight: 3, color: "var(--accent)",
+          createResult: () => `Game spend reward: R${20 + Math.floor(Math.random() * 9) * 10}.`
+        },
+        {
+          id: "back-rub", label: "Back rub reward", weight: 1, color: "var(--highlight)",
+          createResult: () => "Back rub from girlfriend \u2014 duration decided by her."
+        }
+      ],
+      tokenCost: 50,
+      data: { tokens: 0 },
+      rotation: 0,
+      isSpinning: false,
+
+      load() {
+        try {
+          const saved = JSON.parse(localStorage.getItem(this.storageKey));
+          if (saved && Number.isFinite(saved.tokens)) {
+            this.data = { tokens: Math.max(0, saved.tokens) };
+          }
+        } catch {
+          console.warn("Reward wheel could not be loaded.");
+        }
+      },
+
+      save() {
+        try {
+          localStorage.setItem(this.storageKey, JSON.stringify(this.data));
+        } catch {
+          console.warn("Reward wheel could not be saved.");
+        }
+      },
+
+      adjustTokens(amount) {
+        this.data.tokens = Math.max(0, this.data.tokens + amount);
+        this.save();
+        this.render();
+      },
+
+      chooseReward() {
+        const totalWeight = this.config.reduce((total, reward) => total + reward.weight, 0);
+        let marker = Math.random() * totalWeight;
+        return this.config.find(reward => (marker -= reward.weight) < 0) || this.config[0];
+      },
+
+      getWheelGradient() {
+        const totalWeight = this.config.reduce((total, reward) => total + reward.weight, 0);
+        let position = 0;
+        const stops = this.config.map(reward => {
+          const nextPosition = position + (reward.weight / totalWeight) * 100;
+          const stop = `${reward.color} ${position}% ${nextPosition}%`;
+          position = nextPosition;
+          return stop;
+        });
+        return `conic-gradient(${stops.join(", ")})`;
+      },
+
+      getLandingRotation(reward) {
+        const totalWeight = this.config.reduce((total, item) => total + item.weight, 0);
+        const before = this.config.slice(0, this.config.indexOf(reward)).reduce((total, item) => total + item.weight, 0);
+        const rewardAngle = (reward.weight / totalWeight) * 360;
+        const centerAngle = ((before / totalWeight) * 360) + (rewardAngle / 2);
+        return this.rotation + (360 * 6) - centerAngle;
+      },
+
+      spin() {
+        if (this.isSpinning || this.data.tokens < this.tokenCost) return;
+        const reward = this.chooseReward();
+        this.isSpinning = true;
+        this.data.tokens -= this.tokenCost;
+        this.rotation = this.getLandingRotation(reward);
+        this.save();
+        Elements.rewardWheel.style.transform = `rotate(${this.rotation}deg)`;
+        this.render("Spinning...");
+        window.setTimeout(() => {
+          this.isSpinning = false;
+          this.render(reward.createResult());
+        }, 2800);
+      },
+
+      render(message) {
+        Elements.rewardWheel.style.background = this.getWheelGradient();
+        Elements.plannerTokenCounter.textContent = `${this.data.tokens} token${this.data.tokens === 1 ? "" : "s"}`;
+        Elements.spinRewardWheelButton.disabled = this.isSpinning || this.data.tokens < this.tokenCost;
+        if (message) {
+          Elements.rewardResult.textContent = message;
+          Elements.rewardResult.classList.remove("empty");
+        }
+      }
+    };
+
     const Planner = {
       storageKey: "readingTrainer.dailyChecklist.v1",
       data: { currentDate: "", days: {}, templates: [] },
@@ -1053,6 +1198,10 @@
         } catch {
           console.warn("Checklist could not be loaded.");
         }
+        Object.values(this.data.days).forEach(entries => entries.forEach(entry => {
+          entry.difficulty = entry.difficulty || "none";
+          entry.awardedTokens = Number.isFinite(entry.awardedTokens) ? entry.awardedTokens : 0;
+        }));
         this.ensureCurrentDay();
       },
 
@@ -1090,7 +1239,9 @@
             id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
             templateId: template.id,
             title: template.title,
-            completed: false
+            completed: false,
+            difficulty: "none",
+            awardedTokens: 0
           }));
         this.data.days[key] = [...entries, ...recurringEntries];
       },
@@ -1114,12 +1265,12 @@
         const id = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
         const dateKey = this.getKeyForOffset(this.viewOffset);
         if (recurrence === "once") {
-          this.data.days[dateKey].push({ id, title: cleanTitle, completed: false });
+          this.data.days[dateKey].push({ id, title: cleanTitle, completed: false, difficulty: "none", awardedTokens: 0 });
         } else {
           const template = { id, title: cleanTitle, recurrence, days };
           this.data.templates.push(template);
           if (this.isDueToday(template, this.dateFromKey(dateKey))) {
-            this.data.days[dateKey].push({ id: `${id}-${dateKey}`, templateId: id, title: cleanTitle, completed: false });
+            this.data.days[dateKey].push({ id: `${id}-${dateKey}`, templateId: id, title: cleanTitle, completed: false, difficulty: "none", awardedTokens: 0 });
           }
         }
         this.save();
@@ -1127,9 +1278,27 @@
       },
 
       toggleTask(id) {
-        const task = this.data.days[this.getKeyForOffset(this.viewOffset)].find(entry => entry.id === id);
+        const dateKey = this.getKeyForOffset(this.viewOffset);
+        const entries = this.data.days[dateKey];
+        const task = entries.find(entry => entry.id === id);
         if (!task) return;
         task.completed = !task.completed;
+        if (task.completed) {
+          const awards = { none: 0, easy: 1, medium: 3, hard: 5 };
+          task.awardedTokens = awards[task.difficulty || "none"] || 0;
+          RewardWheel.adjustTokens(task.awardedTokens);
+        } else {
+          RewardWheel.adjustTokens(-(task.awardedTokens || 0));
+          task.awardedTokens = 0;
+        }
+        this.save();
+        this.render();
+      },
+
+      setTaskDifficulty(id, difficulty) {
+        const task = this.data.days[this.getKeyForOffset(this.viewOffset)].find(entry => entry.id === id);
+        if (!task || task.completed || !["none", "easy", "medium", "hard"].includes(difficulty)) return;
+        task.difficulty = difficulty;
         this.save();
         this.render();
       },
@@ -1138,10 +1307,14 @@
         const dateKey = this.getKeyForOffset(this.viewOffset);
         const task = this.data.days[dateKey].find(entry => entry.id === id);
         if (!task) return;
+        if (task.awardedTokens) RewardWheel.adjustTokens(-task.awardedTokens);
         this.data.days[dateKey] = this.data.days[dateKey].filter(entry => entry.id !== id);
         if (task.templateId) {
           this.data.templates = this.data.templates.filter(template => template.id !== task.templateId);
           Object.values(this.data.days).forEach(entries => {
+            entries.filter(entry => entry.templateId === task.templateId && entry.id !== id).forEach(entry => {
+              if (entry.awardedTokens) RewardWheel.adjustTokens(-entry.awardedTokens);
+            });
             const index = entries.findIndex(entry => entry.templateId === task.templateId);
             if (index !== -1) entries.splice(index, 1);
           });
@@ -1185,6 +1358,12 @@
           <li class="task-item${task.completed ? " done" : ""}">
             <input type="checkbox" data-task-toggle="${task.id}" ${task.completed ? "checked" : ""} aria-label="Mark ${TextTools.escapeHtml(task.title)} complete" />
             <span class="task-name">${TextTools.escapeHtml(task.title)}</span>
+            <select class="difficulty-select" data-task-difficulty="${task.id}" ${task.completed ? "disabled" : ""} aria-label="Difficulty for ${TextTools.escapeHtml(task.title)}">
+              <option value="none" ${(task.difficulty || "none") === "none" ? "selected" : ""}>None</option>
+              <option value="easy" ${task.difficulty === "easy" ? "selected" : ""}>Easy</option>
+              <option value="medium" ${task.difficulty === "medium" ? "selected" : ""}>Medium</option>
+              <option value="hard" ${task.difficulty === "hard" ? "selected" : ""}>Hard</option>
+            </select>
             <span class="recurrence-tag">${this.recurrenceLabel(task)}</span>
             <button class="icon-button" type="button" data-task-delete="${task.id}" aria-label="Delete ${TextTools.escapeHtml(task.title)}">Delete</button>
           </li>
@@ -1283,17 +1462,29 @@
 
       Elements.taskList.addEventListener("change", event => {
         if (event.target.matches("[data-task-toggle]")) Planner.toggleTask(event.target.dataset.taskToggle);
+        if (event.target.matches("[data-task-difficulty]")) {
+          Planner.setTaskDifficulty(event.target.dataset.taskDifficulty, event.target.value);
+        }
       });
 
       Elements.taskList.addEventListener("click", event => {
         const button = event.target.closest("[data-task-delete]");
         if (button) Planner.removeTask(button.dataset.taskDelete);
       });
+
+      Elements.spinRewardWheelButton.addEventListener("click", () => RewardWheel.spin());
+      Elements.rewardWheelToggle.addEventListener("click", () => {
+        const isHidden = Elements.rewardWheelPanel.hidden;
+        Elements.rewardWheelPanel.hidden = !isHidden;
+        Elements.rewardWheelToggle.textContent = isHidden ? "Hide reward wheel" : "Show reward wheel";
+        Elements.rewardWheelToggle.setAttribute("aria-expanded", String(isHidden));
+      });
     }
 
     function initApp() {
       SettingsRepository.loadSettings();
       Planner.load();
+      RewardWheel.load();
       bindEvents();
 
       UI.setStatus("Ready");
@@ -1302,6 +1493,7 @@
       UI.updateIdleStats();
       SourceTrace.render();
       Planner.render();
+      RewardWheel.render();
       setInterval(() => Planner.render(), 60 * 1000);
     }
 

@@ -339,7 +339,7 @@
     }
 
     .home-app { grid-template-rows: minmax(0, 1fr); max-width: 760px; margin: 0 auto; }
-    .home-panel { display: grid; grid-template-columns: 1fr; grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: stretch; }
+    .home-panel { display: grid; grid-template-columns: 1fr; grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 18px; align-items: stretch; }
     .home-choice { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: clamp(20px, 6vw, 58px); padding: 24px 36px; border: 1px solid var(--border); border-radius: 24px; background: linear-gradient(145deg, rgba(45,29,27,.96), rgba(26,17,17,.94)); color: var(--text); font-size: clamp(26px, 4vw, 38px); font-weight: 700; box-shadow: 0 20px 60px rgba(36, 8, 7, .35); }
     .home-choice::after { content: ""; position: absolute; inset: auto -20% -45% auto; width: 90%; aspect-ratio: 1; background: radial-gradient(circle, rgba(255,122,89,.2), transparent 65%); }
     .home-choice:hover { border-color: var(--accent); background: linear-gradient(145deg, rgba(122,34,29,.75), rgba(45,29,27,.96)); }
@@ -409,6 +409,39 @@
     .reward-result.empty { color: var(--muted); }
     .reward-note { margin-top: 14px !important; font-size: 12px !important; }
 
+    .goals-app { grid-template-rows: auto auto minmax(0, 1fr); max-width: 1180px; margin: 0 auto; }
+    .goals-header { padding: 66px 4px 4px; }
+    .goals-header h1 { margin: 0; font-size: 28px; }
+    .goals-header p { margin: 5px 0 0; color: var(--muted); }
+    .goals-add-panel { margin: 10px 0; padding: 0 16px; border: 1px solid var(--border); border-radius: 16px; background: rgba(26,17,17,.78); }
+    .goals-add-panel summary { padding: 13px 0; cursor: pointer; color: var(--text); font-weight: 700; }
+    .goal-form { display: grid; grid-template-columns: minmax(0, 1fr) 130px auto; gap: 10px; padding: 2px 0 16px; }
+    .goal-form textarea { grid-column: 1 / -1; min-height: 74px; resize: vertical; }
+    .size-spinner { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 130px; padding: 7px 10px; background: var(--panel-light); }
+    .size-spinner__wheel { display: grid; place-items: center; width: 30px; height: 30px; border: 2px dashed var(--highlight); border-radius: 50%; color: var(--highlight); font-size: 13px; font-weight: 700; transition: transform .25s ease; }
+    .size-spinner:hover .size-spinner__wheel { transform: rotate(120deg); }
+    textarea { width: 100%; background: var(--panel); border: 1px solid var(--border); color: var(--text); border-radius: 9px; padding: 10px; font: inherit; font-size: 14px; outline: none; }
+    textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .goals-board { min-height: 0; overflow-y: auto; display: grid; grid-auto-flow: dense; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: 92px; gap: 14px; padding: 22px; border: 1px solid var(--border); border-radius: 24px; background-color: #291816; background-image: radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px), linear-gradient(135deg, rgba(226,74,59,.08), transparent 42%); background-size: 18px 18px, auto; box-shadow: inset 0 0 50px rgba(0,0,0,.26), 0 20px 60px rgba(0,0,0,.3); }
+    .goal-poster { grid-column: span 2; grid-row: span 2; position: relative; overflow: hidden; border: 0; border-radius: 4px; padding: 16px; background: linear-gradient(145deg, #E24A3B, #8F2E27); color: var(--text); font-family: Georgia, serif; font-size: clamp(18px, 2.4vw, 29px); font-weight: 700; line-height: 1.05; text-align: left; box-shadow: 5px 8px 13px rgba(0,0,0,.32); transform: rotate(-1.2deg); }
+    .goal-poster:nth-child(even) { background: linear-gradient(145deg, #B88A52, #704525); transform: rotate(1deg); }
+    .goal-poster:nth-child(3n) { background: linear-gradient(145deg, #79332B, #3B1E1A); transform: rotate(-.4deg); }
+    .goal-poster::after { content: ""; position: absolute; inset: 8px; border: 1px solid rgba(255,255,255,.22); pointer-events: none; }
+    .goal-poster.size-2 { grid-column: span 3; grid-row: span 2; font-size: clamp(23px, 3vw, 38px); }
+    .goal-poster.size-3 { grid-column: span 3; grid-row: span 3; font-size: clamp(27px, 3.6vw, 48px); }
+    .goal-poster:hover { transform: translateY(-3px) rotate(0); background-color: var(--accent); }
+    .goals-empty { grid-column: 1 / -1; align-self: center; padding: 35px; color: var(--muted); text-align: center; }
+    .goal-modal[hidden] { display: none; }
+    .goal-modal { position: fixed; z-index: 30; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(7,4,4,.78); backdrop-filter: blur(6px); }
+    .goal-detail { position: relative; width: min(680px, 100%); max-height: min(760px, 92dvh); overflow-y: auto; padding: clamp(26px, 5vw, 52px); border: 1px solid rgba(255,255,255,.22); border-radius: 8px; background: linear-gradient(145deg, #B83D32, #5E211D); box-shadow: 10px 16px 45px rgba(0,0,0,.55); }
+    .goal-detail h2 { margin: 0 38px 22px 0; font-family: Georgia, serif; font-size: clamp(35px, 7vw, 66px); line-height: .95; }
+    .goal-detail-close { position: absolute; top: 18px; right: 18px; min-width: auto; padding: 8px 12px; }
+    .goal-description { white-space: pre-wrap; color: #FFF4ED; font-size: 17px; line-height: 1.55; }
+    .goal-description.empty { color: rgba(255,244,237,.72); font-style: italic; }
+    .goal-edit-form { display: grid; gap: 10px; margin-top: 22px; }
+    .goal-edit-form[hidden] { display: none; }
+    .goal-detail-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 26px; }
+
     #progressFill {
       height: 100%;
       width: 0%;
@@ -452,6 +485,11 @@
         grid-template-rows: 1fr auto 32vh;
       }
 
+      /* These pages have their own two/three-row layouts, rather than the reader's layout. */
+      .home-app { grid-template-rows: minmax(0, 1fr); }
+      .planner-app { grid-template-rows: auto minmax(0, 1fr); }
+      .goals-app { grid-template-rows: auto auto minmax(0, 1fr); }
+
       .top-bar {
         padding: 14px;
         align-items: flex-start;
@@ -463,8 +501,32 @@
       .title-block { padding-right: 135px; }
       .reader-page .top-bar { padding: 54px 14px 14px; }
       .planner-header { display: block; padding-top: 52px; }
+      .goals-header { padding-top: 52px; }
+      .goals-add-panel { margin: 8px 0; padding: 0 12px; }
+      .goal-form { grid-template-columns: 1fr 110px; }
+      .goal-form button { grid-column: 1 / -1; }
+      .goals-board { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 112px; gap: 10px; padding: 12px; border-radius: 18px; }
+      .goal-poster { grid-column: span 1; grid-row: span 2; font-size: 22px; }
+      .goal-poster.size-2 { grid-column: span 2; grid-row: span 2; font-size: 29px; }
+      .goal-poster.size-3 { grid-column: span 2; grid-row: span 3; font-size: 36px; }
       #plannerDate { display: block; margin-top: 9px; }
       .planner-panel { padding: 14px; border-radius: 18px; }
+      /*
+        Keep a short checklist compact, but let a longer one use the spare
+        height in the panel. This avoids making the whole checklist panel a
+        tiny scroll target on phones.
+      */
+      .planner-panel.has-many-tasks {
+        display: grid;
+        grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+        overflow: hidden;
+      }
+      .planner-panel.has-many-tasks .task-list {
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-right: 3px;
+      }
       .task-form { grid-template-columns: 1fr 110px; }
       .task-form button { grid-column: 1 / -1; }
       #weeklyDays { grid-template-columns: repeat(4, 1fr); }
@@ -524,6 +586,7 @@
     <button id="homePageButton" class="active" type="button">Home</button>
     <button id="readerPageButton" type="button">Reader</button>
     <button id="plannerPageButton" type="button">Daily list</button>
+    <button id="goalsPageButton" type="button">Goals</button>
   </nav>
 
   <main class="app page home-app active" id="homePage">
@@ -535,6 +598,10 @@
       <button class="home-choice" type="button" data-go-to="planner">
         <img src="assets-ember-salamander.png" alt="Ember salamander mascot" />
         <span>Checklist</span>
+      </button>
+      <button class="home-choice" type="button" data-go-to="goals">
+        <img src="assets-baby-squid.png" alt="Baby squid mascot" />
+        <span>Goals</span>
       </button>
     </section>
   </main>
@@ -654,6 +721,45 @@
     </section>
   </main>
 
+  <main class="app page goals-app" id="goalsPage">
+    <header class="goals-header">
+      <div>
+        <h1>Goals wall</h1>
+        <p>A visible reminder of the long game you are building.</p>
+      </div>
+    </header>
+
+    <details class="goals-add-panel">
+      <summary>Add a goal</summary>
+      <form id="goalForm" class="goal-form">
+        <input id="goalTitleInput" type="text" maxlength="100" placeholder="Goal title" aria-label="Goal title" required />
+        <button id="goalSizeSpin" class="size-spinner" type="button" aria-label="Choose poster size" title="Choose poster size"><span id="goalSizeWheel" class="size-spinner__wheel">M</span><span id="goalSizeLabel">Medium</span></button>
+        <button class="primary" type="submit">Add to wall</button>
+        <textarea id="goalDescriptionInput" maxlength="2000" placeholder="Description — what does this goal mean to you?" aria-label="Goal description"></textarea>
+      </form>
+    </details>
+
+    <section id="goalsBoard" class="goals-board" aria-label="Goals wall" aria-live="polite"></section>
+  </main>
+
+  <div id="goalModal" class="goal-modal" hidden role="dialog" aria-modal="true" aria-labelledby="goalDetailTitle">
+    <article class="goal-detail">
+      <button id="goalDetailClose" class="goal-detail-close" type="button" aria-label="Close goal">Close</button>
+      <h2 id="goalDetailTitle"></h2>
+      <div id="goalDetailDescription" class="goal-description"></div>
+      <form id="goalEditForm" class="goal-edit-form" hidden>
+        <label for="goalEditDescription">Description</label>
+        <textarea id="goalEditDescription" maxlength="2000" aria-label="Edit goal description"></textarea>
+        <button class="primary" type="submit">Save description</button>
+      </form>
+      <div class="goal-detail-actions">
+        <button id="goalDetailSizeSpin" class="size-spinner" type="button" aria-label="Change poster size"><span id="goalDetailSizeWheel" class="size-spinner__wheel">M</span><span id="goalDetailSizeLabel">Medium</span></button>
+        <button id="goalEditToggle" type="button">Edit description</button>
+        <button id="goalDeleteButton" class="danger" type="button">Delete goal</button>
+      </div>
+    </article>
+  </div>
+
   <script>
     /*
       Reading Speed Trainer
@@ -705,13 +811,16 @@
       homePage: document.getElementById("homePage"),
       readerPage: document.getElementById("readerPage"),
       plannerPage: document.getElementById("plannerPage"),
+      goalsPage: document.getElementById("goalsPage"),
       homePageButton: document.getElementById("homePageButton"),
       readerPageButton: document.getElementById("readerPageButton"),
       plannerPageButton: document.getElementById("plannerPageButton"),
+      goalsPageButton: document.getElementById("goalsPageButton"),
       taskForm: document.getElementById("taskForm"),
       taskTitleInput: document.getElementById("taskTitleInput"),
       recurrenceInput: document.getElementById("recurrenceInput"),
       weeklyDays: document.getElementById("weeklyDays"),
+      plannerPanel: document.querySelector(".planner-panel"),
       taskList: document.getElementById("taskList"),
       taskSummary: document.getElementById("taskSummary"),
       taskProgress: document.getElementById("taskProgress"),
@@ -723,7 +832,25 @@
       rewardWheelToggle: document.getElementById("rewardWheelToggle"),
       rewardWheelPanel: document.getElementById("rewardWheelPanel"),
       spinRewardWheelButton: document.getElementById("spinRewardWheelButton"),
-      rewardResult: document.getElementById("rewardResult")
+      rewardResult: document.getElementById("rewardResult"),
+      goalForm: document.getElementById("goalForm"),
+      goalTitleInput: document.getElementById("goalTitleInput"),
+      goalSizeSpin: document.getElementById("goalSizeSpin"),
+      goalSizeWheel: document.getElementById("goalSizeWheel"),
+      goalSizeLabel: document.getElementById("goalSizeLabel"),
+      goalDescriptionInput: document.getElementById("goalDescriptionInput"),
+      goalsBoard: document.getElementById("goalsBoard"),
+      goalModal: document.getElementById("goalModal"),
+      goalDetailTitle: document.getElementById("goalDetailTitle"),
+      goalDetailDescription: document.getElementById("goalDetailDescription"),
+      goalDetailClose: document.getElementById("goalDetailClose"),
+      goalEditToggle: document.getElementById("goalEditToggle"),
+      goalEditForm: document.getElementById("goalEditForm"),
+      goalEditDescription: document.getElementById("goalEditDescription"),
+      goalDetailSizeSpin: document.getElementById("goalDetailSizeSpin"),
+      goalDetailSizeWheel: document.getElementById("goalDetailSizeWheel"),
+      goalDetailSizeLabel: document.getElementById("goalDetailSizeLabel"),
+      goalDeleteButton: document.getElementById("goalDeleteButton")
     };
 
     const SettingsRepository = {
@@ -1346,6 +1473,7 @@
 
         const total = entries.length;
         const complete = entries.filter(task => task.completed).length;
+        Elements.plannerPanel.classList.toggle("has-many-tasks", total > 3);
         Elements.taskSummary.textContent = `${total} task${total === 1 ? "" : "s"} for ${this.viewOffset ? "tomorrow" : "today"}`;
         Elements.taskProgress.textContent = `${complete} complete`;
 
@@ -1371,19 +1499,151 @@
       }
     };
 
+    const Goals = {
+      storageKey: "readingTrainer.goals.v1",
+      data: [],
+      activeId: null,
+      newGoalSize: 2,
+
+      sizeName(size) {
+        return ["Small", "Medium", "Large"][size - 1] || "Medium";
+      },
+
+      updateSizeControl(wheel, label, size) {
+        wheel.textContent = ["S", "M", "L"][size - 1] || "M";
+        label.textContent = this.sizeName(size);
+        wheel.style.transform = `rotate(${Number(wheel.dataset.rotation || 0) + 120}deg)`;
+        wheel.dataset.rotation = String(Number(wheel.dataset.rotation || 0) + 120);
+      },
+
+      load() {
+        try {
+          const saved = JSON.parse(localStorage.getItem(this.storageKey));
+          if (Array.isArray(saved)) {
+            this.data = saved.filter(goal => goal && typeof goal.title === "string").map(goal => ({
+              id: goal.id || (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`),
+              title: goal.title.slice(0, 100),
+              description: typeof goal.description === "string" ? goal.description.slice(0, 2000) : "",
+              // `importance` is retained as a fallback for goals created before size control existed.
+              size: Math.max(1, Math.min(3, Number(goal.size || goal.importance) || 2))
+            }));
+          }
+        } catch {
+          console.warn("Goals could not be loaded.");
+        }
+      },
+
+      save() {
+        try {
+          localStorage.setItem(this.storageKey, JSON.stringify(this.data));
+        } catch {
+          console.warn("Goals could not be saved.");
+        }
+      },
+
+      add(title, size, description) {
+        const cleanTitle = title.trim();
+        if (!cleanTitle) return;
+        this.data.push({
+          id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+          title: cleanTitle,
+          description: description.trim(),
+          size: Math.max(1, Math.min(3, Number(size) || 2))
+        });
+        this.save();
+        this.render();
+      },
+
+      getActiveGoal() {
+        return this.data.find(goal => goal.id === this.activeId);
+      },
+
+      open(id) {
+        this.activeId = id;
+        const goal = this.getActiveGoal();
+        if (!goal) return;
+        Elements.goalDetailTitle.textContent = goal.title;
+        Elements.goalDetailDescription.textContent = goal.description || "No description yet. Use Edit description to add one.";
+        Elements.goalDetailDescription.classList.toggle("empty", !goal.description);
+        Elements.goalEditDescription.value = goal.description;
+        this.updateSizeControl(Elements.goalDetailSizeWheel, Elements.goalDetailSizeLabel, goal.size);
+        Elements.goalEditForm.hidden = true;
+        Elements.goalEditToggle.textContent = "Edit description";
+        Elements.goalModal.hidden = false;
+        Elements.goalDetailClose.focus();
+      },
+
+      close() {
+        Elements.goalModal.hidden = true;
+        this.activeId = null;
+      },
+
+      toggleEditing() {
+        const isHidden = Elements.goalEditForm.hidden;
+        Elements.goalEditForm.hidden = !isHidden;
+        Elements.goalEditToggle.textContent = isHidden ? "Cancel editing" : "Edit description";
+        if (isHidden) Elements.goalEditDescription.focus();
+      },
+
+      updateDescription(description) {
+        const goal = this.getActiveGoal();
+        if (!goal) return;
+        goal.description = description.trim();
+        this.save();
+        this.open(goal.id);
+      },
+
+      cycleNewGoalSize() {
+        this.newGoalSize = this.newGoalSize === 3 ? 1 : this.newGoalSize + 1;
+        this.updateSizeControl(Elements.goalSizeWheel, Elements.goalSizeLabel, this.newGoalSize);
+      },
+
+      cycleActiveGoalSize() {
+        const goal = this.getActiveGoal();
+        if (!goal) return;
+        goal.size = goal.size === 3 ? 1 : goal.size + 1;
+        this.save();
+        this.render();
+        this.updateSizeControl(Elements.goalDetailSizeWheel, Elements.goalDetailSizeLabel, goal.size);
+      },
+
+      removeActive() {
+        const goal = this.getActiveGoal();
+        if (!goal) return;
+        this.data = this.data.filter(item => item.id !== goal.id);
+        this.save();
+        this.close();
+        this.render();
+      },
+
+      render() {
+        if (this.data.length === 0) {
+          Elements.goalsBoard.innerHTML = '<p class="goals-empty">Your wall is waiting. Add a goal that deserves a little space in your mind.</p>';
+          return;
+        }
+        Elements.goalsBoard.innerHTML = this.data.map(goal => `
+          <button class="goal-poster size-${goal.size}" type="button" data-goal-open="${goal.id}" aria-label="Open goal: ${TextTools.escapeHtml(goal.title)}">${TextTools.escapeHtml(goal.title)}</button>
+        `).join("");
+      }
+    };
+
     const PageNavigation = {
       show(page) {
         const plannerVisible = page === "planner";
         const readerVisible = page === "reader";
+        const goalsVisible = page === "goals";
         if (!readerVisible && AppState.isPlaying) ReaderEngine.stop();
         Elements.homePage.classList.toggle("active", page === "home");
         Elements.readerPage.classList.toggle("active", readerVisible);
         Elements.plannerPage.classList.toggle("active", plannerVisible);
+        Elements.goalsPage.classList.toggle("active", goalsVisible);
         Elements.homePageButton.classList.toggle("active", page === "home");
         Elements.readerPageButton.classList.toggle("active", readerVisible);
         Elements.plannerPageButton.classList.toggle("active", plannerVisible);
+        Elements.goalsPageButton.classList.toggle("active", goalsVisible);
         Elements.pageNav.classList.toggle("hidden", page === "home");
         if (plannerVisible) Planner.render();
+        if (goalsVisible) Goals.render();
       }
     };
 
@@ -1427,6 +1687,7 @@
       Elements.homePageButton.addEventListener("click", () => PageNavigation.show("home"));
       Elements.readerPageButton.addEventListener("click", () => PageNavigation.show("reader"));
       Elements.plannerPageButton.addEventListener("click", () => PageNavigation.show("planner"));
+      Elements.goalsPageButton.addEventListener("click", () => PageNavigation.show("goals"));
       document.querySelectorAll("[data-go-to]").forEach(button => {
         button.addEventListener("click", () => PageNavigation.show(button.dataset.goTo));
       });
@@ -1472,6 +1733,36 @@
         if (button) Planner.removeTask(button.dataset.taskDelete);
       });
 
+      Elements.goalForm.addEventListener("submit", event => {
+        event.preventDefault();
+        Goals.add(Elements.goalTitleInput.value, Goals.newGoalSize, Elements.goalDescriptionInput.value);
+        Elements.goalForm.reset();
+        Goals.newGoalSize = 2;
+        Goals.updateSizeControl(Elements.goalSizeWheel, Elements.goalSizeLabel, Goals.newGoalSize);
+        Elements.goalTitleInput.focus();
+      });
+
+      Elements.goalSizeSpin.addEventListener("click", () => Goals.cycleNewGoalSize());
+
+      Elements.goalsBoard.addEventListener("click", event => {
+        const poster = event.target.closest("[data-goal-open]");
+        if (poster) Goals.open(poster.dataset.goalOpen);
+      });
+      Elements.goalDetailClose.addEventListener("click", () => Goals.close());
+      Elements.goalModal.addEventListener("click", event => {
+        if (event.target === Elements.goalModal) Goals.close();
+      });
+      Elements.goalEditToggle.addEventListener("click", () => Goals.toggleEditing());
+      Elements.goalDetailSizeSpin.addEventListener("click", () => Goals.cycleActiveGoalSize());
+      Elements.goalEditForm.addEventListener("submit", event => {
+        event.preventDefault();
+        Goals.updateDescription(Elements.goalEditDescription.value);
+      });
+      Elements.goalDeleteButton.addEventListener("click", () => Goals.removeActive());
+      document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && !Elements.goalModal.hidden) Goals.close();
+      });
+
       Elements.spinRewardWheelButton.addEventListener("click", () => RewardWheel.spin());
       Elements.rewardWheelToggle.addEventListener("click", () => {
         const isHidden = Elements.rewardWheelPanel.hidden;
@@ -1484,6 +1775,7 @@
     function initApp() {
       SettingsRepository.loadSettings();
       Planner.load();
+      Goals.load();
       RewardWheel.load();
       bindEvents();
 
@@ -1493,6 +1785,7 @@
       UI.updateIdleStats();
       SourceTrace.render();
       Planner.render();
+      Goals.render();
       RewardWheel.render();
       setInterval(() => Planner.render(), 60 * 1000);
     }
